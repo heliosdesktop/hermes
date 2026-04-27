@@ -1,0 +1,55 @@
+name: Build Hermes Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      hermes_ref:
+        description: Hermes git ref to resolve and build
+        default: 250829098.0.0-stable
+        required: true
+      build_type:
+        description: CMake build type
+        default: Release
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14
+            os: macos
+          # - target: x86_64-pc-windows-msvc
+          #   runner: windows-2022
+          #   os: windows
+          #   msvc_arch: x64
+          # - target: aarch64-pc-windows-msvc
+          #   runner: windows-11-arm
+          #   os: windows
+          #   msvc_arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Dependencies (macOS)
+        if: matrix.os == 'macos'
+        run: brew install cmake ninja
+
+      - name: Checkout Hermes
+        if: matrix.os == 'macos'
+        run: ./scripts/checkout_hermes.sh
+        env:
+          HERMES_REF: ${{ github.event.inputs.hermes_ref }}
+
+      - name: Build Hermes
+        if: matrix.os == 'macos'
+        run: ./scripts/build_hermes_macos.sh
+        env:
+          BUILD_TYPE: ${{ github.event.inputs.build_type }}
