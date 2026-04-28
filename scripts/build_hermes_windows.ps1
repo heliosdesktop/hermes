@@ -25,4 +25,4 @@ if ($env:MSVC_ARCH -eq "arm64") {
 }
 
 cmake @cmakeArgs
-cmake --build build --config $build_type --parallel
+cmake --build build --config $build_type
