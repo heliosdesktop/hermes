@@ -31,14 +31,14 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             runner: ubuntu-22.04-arm
             os: linux
-          # - target: x86_64-pc-windows-msvc
-          #   runner: windows-2022
-          #   os: windows
-          #   msvc_arch: x64
-          # - target: aarch64-pc-windows-msvc
-          #   runner: windows-11-arm
-          #   os: windows
-          #   msvc_arch: arm64
+          - target: x86_64-pc-windows-msvc
+            runner: windows-2022
+            os: windows
+            msvc_arch: x64
+          - target: aarch64-pc-windows-msvc
+            runner: windows-11-arm
+            os: windows
+            msvc_arch: arm64
 
     steps:
       - name: Checkout code
@@ -50,16 +50,29 @@ jobs:
 
       - name: Install Dependencies (Linux)
         if: matrix.os == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+        run: sudo apt-get update && sudo apt install build-essential cmake git ninja-build libicu-dev python3 tzdata libreadline-dev
 
-      - name: Checkout Hermes
+      - name: Checkout Hermes (Unix)
         if: matrix.os == 'macos' || matrix.os == 'linux'
         run: ./scripts/checkout_hermes.sh
         env:
           HERMES_REF: ${{ github.event.inputs.hermes_ref }}
 
-      - name: Build Hermes
+      - name: Checkout Hermes (Windows)
+        if: matrix.os == 'windows'
+        run: .\scripts\checkout_hermes.ps1
+        env:
+          HERMES_REF: ${{ github.event.inputs.hermes_ref }}
+
+      - name: Build Hermes (Unix)
         if: matrix.os == 'macos' || matrix.os == 'linux'
         run: ./scripts/build_hermes_unix.sh
         env:
           BUILD_TYPE: ${{ github.event.inputs.build_type }}
+
+      - name: Build Hermes (Windows)
+        if: matrix.os == 'windows'
+        run: .\scripts\build_hermes_windows.ps1
+        env:
+          BUILD_TYPE: ${{ github.event.inputs.build_type }}
+          MSVC_ARCH: ${{ matrix.msvc_arch }}
