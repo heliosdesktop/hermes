@@ -52,6 +52,23 @@ jobs:
         if: matrix.os == 'linux'
         run: sudo apt-get update && sudo apt install build-essential cmake git ninja-build libicu-dev python3 tzdata libreadline-dev
 
+      - name: Install Dependencies (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $cmakeVersion = "3.30.9"
+          $cmakeArch = if ("${{ matrix.msvc_arch }}" -eq "arm64") { "windows-arm64" } else { "windows-x86_64" }
+          $cmakeRoot = "$env:RUNNER_TEMP\cmake"
+          $archive = "$env:RUNNER_TEMP\cmake.zip"
+          $cmakeUrl = "https://github.com/Kitware/CMake/releases/download/v$cmakeVersion/cmake-$cmakeVersion-$cmakeArch.zip"
+
+          Invoke-WebRequest -Uri $cmakeUrl -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $cmakeRoot
+
+          $cmakeBin = Join-Path $cmakeRoot "cmake-$cmakeVersion-$cmakeArch\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $cmakeBin
+          & (Join-Path $cmakeBin "cmake.exe") --version
+
       - name: Checkout Hermes (Unix)
         if: matrix.os == 'macos' || matrix.os == 'linux'
         run: ./scripts/checkout_hermes.sh
