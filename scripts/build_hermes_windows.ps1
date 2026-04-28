@@ -12,5 +12,17 @@ switch ($env:MSVC_ARCH) {
     default { throw "Unknown MSVC_ARCH: $env:MSVC_ARCH" }
 }
 
-cmake -S hermes -B build -G "Visual Studio 17 2022" -A $cmakeArch -DCMAKE_BUILD_TYPE=$build_type
+$cmakeArgs = @(
+    "-S", "hermes",
+    "-B", "build",
+    "-G", "Visual Studio 17 2022",
+    "-A", $cmakeArch,
+    "-DCMAKE_BUILD_TYPE=$build_type"
+)
+
+if ($env:MSVC_ARCH -eq "arm64") {
+    $cmakeArgs += "-DHERMES_ALLOW_BOOST_CONTEXT=0"
+}
+
+cmake @cmakeArgs
 cmake --build build --config $build_type --parallel

@@ -1,6 +1,9 @@
 name: Build Hermes Artifacts
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       hermes_ref:
@@ -14,6 +17,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  HERMES_REF: ${{ github.event.inputs.hermes_ref || '250829098.0.0-stable' }}
+  BUILD_TYPE: ${{ github.event.inputs.build_type || 'Release' }}
 
 jobs:
   build:
@@ -73,23 +80,23 @@ jobs:
         if: matrix.os == 'macos' || matrix.os == 'linux'
         run: ./scripts/checkout_hermes.sh
         env:
-          HERMES_REF: ${{ github.event.inputs.hermes_ref }}
+          HERMES_REF: ${{ env.HERMES_REF }}
 
       - name: Checkout Hermes (Windows)
         if: matrix.os == 'windows'
         run: .\scripts\checkout_hermes.ps1
         env:
-          HERMES_REF: ${{ github.event.inputs.hermes_ref }}
+          HERMES_REF: ${{ env.HERMES_REF }}
 
       - name: Build Hermes (Unix)
         if: matrix.os == 'macos' || matrix.os == 'linux'
         run: ./scripts/build_hermes_unix.sh
         env:
-          BUILD_TYPE: ${{ github.event.inputs.build_type }}
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
 
       - name: Build Hermes (Windows)
         if: matrix.os == 'windows'
         run: .\scripts\build_hermes_windows.ps1
         env:
-          BUILD_TYPE: ${{ github.event.inputs.build_type }}
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
           MSVC_ARCH: ${{ matrix.msvc_arch }}
