@@ -12,5 +12,5 @@ switch ($env:MSVC_ARCH) {
     default { throw "Unknown MSVC_ARCH: $env:MSVC_ARCH" }
 }
 
-cmake -S hermes -B build -G "Visual Studio 17 2022" -A $cmakeArch
+cmake -S hermes -B build -G "Visual Studio 17 2022" -A $cmakeArch -DCMAKE_BUILD_TYPE=$build_type
 cmake --build build --config $build_type --parallel
