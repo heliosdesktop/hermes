@@ -1,73 +1,34 @@
 # helios-hermes
 
-Standalone build and release repository for prebuilt Hermes desktop runtime artifacts used by Helios.
+A standalone repository that builds, packages, and releases prebuilt Hermes desktop runtime artifacts for use by Helios.
 
-The repository pins an upstream Hermes source release, builds desktop runtime artifacts in GitHub Actions, packages headers and libraries in a stable layout, and publishes archives through GitHub Releases.
+This repo pins a specific Hermes source release, builds desktop runtime artifacts (static libs, dynamic libs, headers) across multiple targets, packages them in a stable layout, and publishes archives with reproducible metadata and checksums.
 
-## Initial Scope
+This repository's purpose is to produce and distribute packaged Hermes runtime artifacts so consumers (like Helios) can depend on a stable archive rather than building Hermes themselves for each platform. The build is driven by pinned Hermes source (version + ref) and produces a single archive per (version, target, build-type) containing headers, libraries, and metadata.
 
-- Hermes line: v1
-- Hermes version: `250829098.0.12`
-- Note: Hermes version is extracted from `https://github.com/facebook/react-native/blob/main/packages/react-native/sdks/hermes-engine/version.properties`
-- Hermes source ref: `250829098.0.0-stable`, resolved to a commit SHA before download
-- Build type: `Release`
-- Targets:
-  - `aarch64-apple-darwin`
-  - `x86_64-apple-darwin`
-  - `x86_64-pc-windows-msvc`
-  - `aarch64-pc-windows-msvc` best-effort, depending on GitHub-hosted runner availability
+Supported versions and targets
 
-Linux can be added later with the same packaging contract.
+- Hermes line: v1 (this repo is scoped to Hermes v1 style artifacts)
+- Default Hermes version: `250829098.0.12`
+  - The Hermes version here is synchronized from React Native's `version.properties` upstream.
+- Default resolved source ref: `250829098.0.0-stable` (resolved to a specific commit SHA during packaging)
+- Build type: `Release` (configurable)
+- Primary targets:
+  - `aarch64-apple-darwin` (Apple Silicon macOS)
+  - `x86_64-apple-darwin` (Intel macOS)
+  - `x86_64-pc-windows-msvc` (Windows x86_64)
+  - `aarch64-pc-windows-msvc` (Windows ARM64, best-effort depending on runner availability)
+- Linux targets can be added later following the same packaging contract.
 
-## Artifact Contract
+Artifact contract
 
-Archives are named:
-
-```txt
+Archive name format:
 helios-hermes-{hermesVersion}-{target}-{buildType}.tar.gz
-```
 
-Each archive contains:
+Inside each archive:
 
-```txt
-include/
-  jsi/
-  hermes/
-lib/
-  libhermes*.a, libjsi*.a, *.lib, *.dll, *.dylib, or *.so depending on target
-metadata.json
-```
-
-`metadata.json` records the Hermes line, Hermes version, resolved source ref, target triple, build type, source URL, source archive SHA-256, packaged libraries, and library SHA-256 values. A sidecar `{archive}.sha256` file records the final archive SHA-256.
-
-## Build Locally
-
-The scripts currently require CMake 3.x for compatibility with Hermes' CMake files.
-
-macOS:
-
-```sh
-HERMES_VERSION=250829098.0.12 HERMES_REF=250829098.0.0-stable TARGET=aarch64-apple-darwin BUILD_TYPE=Release ./scripts/build-hermes-unix.sh
-```
-
-Windows PowerShell:
-
-```powershell
-$env:HERMES_VERSION = "250829098.0.12"
-$env:HERMES_REF = "250829098.0.0-stable"
-$env:TARGET = "x86_64-pc-windows-msvc"
-$env:BUILD_TYPE = "Release"
-.\scripts\build-hermes-windows.ps1
-```
-
-Build output is written to `dist/`.
-
-## Release Flow
-
-Use the `Release Hermes Artifacts` workflow manually, or push a tag matching:
-
-```txt
-helios-hermes-250829098.0.12
-```
-
-The workflow builds all configured targets, downloads the resulting archives, creates or updates a GitHub Release, and uploads the `.tar.gz` archives plus `.sha256` sidecars.
+- include/
+  - jsi/
+  - hermes/
+- lib/
+  - platform-specific library files: `libhermes*.a`, `libjsi*.a`, `*.lib`, `*.dll`, `*.dylib`, or `*.so` depending on target
