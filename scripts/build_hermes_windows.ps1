@@ -18,6 +18,15 @@ switch ($env:MSVC_ARCH) {
     default { throw "Unknown MSVC_ARCH: $env:MSVC_ARCH" }
 }
 
+$manifestToolCommand = Get-Command llvm-mt -ErrorAction SilentlyContinue
+if (-not $manifestToolCommand) {
+    $manifestToolCommand = Get-Command mt -ErrorAction SilentlyContinue
+}
+if (-not $manifestToolCommand) {
+    throw "Could not find llvm-mt or mt on PATH"
+}
+$manifestTool = $manifestToolCommand.Source
+
 $cmakeArgs = @(
     "-S", "hermes",
     "-B", $build_folder,
@@ -32,7 +41,8 @@ $cmakeArgs = @(
     "-DCMAKE_CXX_FLAGS=/D_WINDOWS /D_HAS_EXCEPTIONS=1 /GR",
     "-DCMAKE_CXX_FLAGS_DEBUG=/Zi /Ob0 /Od /RTC1 /EHsc",
     "-DCMAKE_CXX_FLAGS_RELEASE=/O2 /Ob2 /DNDEBUG /EHsc",
-    "-DCMAKE_EXE_LINKER_FLAGS=winmm.lib"
+    "-DCMAKE_EXE_LINKER_FLAGS=winmm.lib",
+    "-DCMAKE_MT=$manifestTool"
 )
 
 cmake @cmakeArgs
