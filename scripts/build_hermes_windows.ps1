@@ -18,7 +18,8 @@ $cmakeArgs = @(
     "-G", "Visual Studio 17 2022",
     "-T", "ClangCL",
     "-A", $cmakeArch,
-    "-DCMAKE_BUILD_TYPE=$build_type"
+    "-DCMAKE_BUILD_TYPE=$build_type",
+    "-DCMAKE_CXX_FLAGS=/EHsc /GR"
 )
 
 if ($env:MSVC_ARCH -eq "arm64") {
