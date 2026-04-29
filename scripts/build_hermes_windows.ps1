@@ -25,4 +25,19 @@ if ($env:MSVC_ARCH -eq "arm64") {
 }
 
 cmake @cmakeArgs
-cmake --build build --config $build_type
+
+$buildTargets = @(
+    "hermesvm_a",
+    "jsi",
+    "hermesc",
+    "hermes",
+    "hvm",
+    "hbcdump",
+    "hbc-diff",
+    "hbc-deltaprep",
+    "hbc-attribute",
+    "dependency-extractor",
+    "hermes-parser"
+)
+
+cmake --build build --config $build_type --target @buildTargets
