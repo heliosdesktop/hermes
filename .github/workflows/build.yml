@@ -101,3 +101,44 @@ jobs:
         env:
           BUILD_TYPE: ${{ env.BUILD_TYPE }}
           MSVC_ARCH: ${{ matrix.msvc_arch }}
+
+      - name: Package build artifacts (Unix)
+        if: matrix.os == 'macos' || matrix.os == 'linux'
+        shell: bash
+        run: |
+          build_type="$(printf '%s' "${BUILD_TYPE}" | tr '[:upper:]' '[:lower:]')"
+          hermes_ref="$(printf '%s' "${HERMES_REF}" | tr '/\\:' '---')"
+          build_dir="build"
+          if [[ "$build_type" == "release" ]]; then
+            build_dir="build_release"
+          fi
+          zip_name="hermes-${hermes_ref}-${TARGET}-${build_type}.zip"
+          cmake -E tar cf "$zip_name" --format=zip "$build_dir"
+          echo "ARTIFACT_NAME=$zip_name" >> "$GITHUB_ENV"
+          echo "ARTIFACT_PATH=$zip_name" >> "$GITHUB_ENV"
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
+          HERMES_REF: ${{ env.HERMES_REF }}
+          TARGET: ${{ matrix.target }}
+
+      - name: Package build artifacts (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          $buildType = $env:BUILD_TYPE.ToLowerInvariant()
+          $hermesRef = $env:HERMES_REF -replace '[/\\:]', '-'
+          $buildDir = if ($buildType -eq "release") { "build-release" } else { "build" }
+          $zipName = "hermes-$hermesRef-$env:TARGET-$buildType.zip"
+          cmake -E tar cf $zipName --format=zip $buildDir
+          "ARTIFACT_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "ARTIFACT_PATH=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
+        env:
+          BUILD_TYPE: ${{ env.BUILD_TYPE }}
+          HERMES_REF: ${{ env.HERMES_REF }}
+          TARGET: ${{ matrix.target }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_PATH }}
