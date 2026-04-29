@@ -104,14 +104,49 @@ jobs:
         if: matrix.os == 'macos' || matrix.os == 'linux'
         shell: bash
         run: |
+          set -euo pipefail
+
           build_type="$(printf '%s' "${BUILD_TYPE}" | tr '[:upper:]' '[:lower:]')"
           hermes_ref="$(printf '%s' "${HERMES_REF}" | tr '/\\:' '---')"
           build_dir="build"
           if [[ "$build_type" == "release" ]]; then
             build_dir="build_release"
           fi
+
+          package_dir="artifact-${TARGET}"
+          rm -rf "$package_dir"
+          mkdir -p "$package_dir/include" "$package_dir/lib"
+
+          if [[ -d "$build_dir/include" ]]; then
+            cmake -E copy_directory "$build_dir/include" "$package_dir/include"
+          fi
+          if [[ -d "hermes/include" ]]; then
+            cmake -E copy_directory "hermes/include" "$package_dir/include"
+          fi
+          if [[ -d "hermes/public" ]]; then
+            cmake -E copy_directory "hermes/public" "$package_dir/include"
+          fi
+          if [[ -d "hermes/API/jsi/jsi" ]]; then
+            mkdir -p "$package_dir/include/jsi"
+            cmake -E copy_directory "hermes/API/jsi/jsi" "$package_dir/include/jsi"
+          fi
+          if [[ -d "hermes/API/hermes" ]]; then
+            mkdir -p "$package_dir/include/hermes"
+            cmake -E copy_directory "hermes/API/hermes" "$package_dir/include/hermes"
+          fi
+
+          find "$build_dir" -type f \( \
+            -name '*.a' -o \
+            -name '*.dylib' -o \
+            -name '*.so' -o \
+            -name '*.so.*' \
+          \) -exec cp {} "$package_dir/lib/" \;
+
+          test -n "$(find "$package_dir/include" -type f -print -quit)"
+          test -n "$(find "$package_dir/lib" -type f -print -quit)"
+
           zip_name="hermes-${hermes_ref}-${TARGET}-${build_type}.zip"
-          cmake -E tar cf "$zip_name" --format=zip "$build_dir"
+          cmake -E chdir "$package_dir" cmake -E tar cf "../$zip_name" --format=zip .
           echo "ARTIFACT_NAME=$zip_name" >> "$GITHUB_ENV"
           echo "ARTIFACT_PATH=$zip_name" >> "$GITHUB_ENV"
         env:
@@ -126,8 +161,42 @@ jobs:
           $buildType = $env:BUILD_TYPE.ToLowerInvariant()
           $hermesRef = $env:HERMES_REF -replace '[/\\:]', '-'
           $buildDir = if ($buildType -eq "release") { "build-release" } else { "build" }
+          $packageDir = "artifact-$env:TARGET"
+
+          if (Test-Path $packageDir) {
+            Remove-Item -Recurse -Force $packageDir
+          }
+          New-Item -ItemType Directory -Force -Path "$packageDir\include", "$packageDir\lib" | Out-Null
+
+          if (Test-Path "$buildDir\include") {
+            cmake -E copy_directory "$buildDir\include" "$packageDir\include"
+          }
+          if (Test-Path "hermes\include") {
+            cmake -E copy_directory "hermes\include" "$packageDir\include"
+          }
+          if (Test-Path "hermes\public") {
+            cmake -E copy_directory "hermes\public" "$packageDir\include"
+          }
+          if (Test-Path "hermes\API\jsi\jsi") {
+            New-Item -ItemType Directory -Force -Path "$packageDir\include\jsi" | Out-Null
+            cmake -E copy_directory "hermes\API\jsi\jsi" "$packageDir\include\jsi"
+          }
+          if (Test-Path "hermes\API\hermes") {
+            New-Item -ItemType Directory -Force -Path "$packageDir\include\hermes" | Out-Null
+            cmake -E copy_directory "hermes\API\hermes" "$packageDir\include\hermes"
+          }
+
+          Get-ChildItem -Path $buildDir -Recurse -File -Include *.lib,*.dll | Copy-Item -Destination "$packageDir\lib" -Force
+
+          if (-not (Get-ChildItem -Path "$packageDir\include" -Recurse -File | Select-Object -First 1)) {
+            throw "Packaged artifact contains no headers"
+          }
+          if (-not (Get-ChildItem -Path "$packageDir\lib" -Recurse -File | Select-Object -First 1)) {
+            throw "Packaged artifact contains no libraries"
+          }
+
           $zipName = "hermes-$hermesRef-$env:TARGET-$buildType.zip"
-          cmake -E tar cf $zipName --format=zip $buildDir
+          cmake -E chdir $packageDir cmake -E tar cf "..\$zipName" --format=zip .
           "ARTIFACT_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
           "ARTIFACT_PATH=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append
         env:
