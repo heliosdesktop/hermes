@@ -16,6 +16,7 @@ $cmakeArgs = @(
     "-S", "hermes",
     "-B", "build",
     "-G", "Visual Studio 17 2022",
+    "-T", "ClangCL",
     "-A", $cmakeArch,
     "-DCMAKE_BUILD_TYPE=$build_type"
 )
