@@ -1,0 +1,56 @@
+name: Release Hermes Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      hermes_ref:
+        description: Hermes git ref to resolve, build, tag, and release
+        default: 250829098.0.0-stable
+        required: true
+      build_type:
+        description: CMake build type
+        default: Release
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+run-name: Release ${{ inputs.hermes_ref }} (${{ inputs.build_type }})
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      hermes_ref: ${{ inputs.hermes_ref }}
+      build_type: ${{ inputs.build_type }}
+
+  release:
+    name: Create release
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ inputs.hermes_ref }}
+          RELEASE_NAME: ${{ inputs.hermes_ref }}
+          BUILD_TYPE: ${{ inputs.build_type }}
+        shell: bash
+        run: |
+          prerelease_flag=()
+          if [[ "$BUILD_TYPE" != "Release" ]]; then
+            prerelease_flag=(--prerelease)
+          fi
+
+          gh release create "$TAG_NAME" artifacts/* \
+            --title "$RELEASE_NAME" \
+            --target "$GITHUB_SHA" \
+            "${prerelease_flag[@]}"
